@@ -1,0 +1,7 @@
+- name: Install/Setup Catalouge service
+  hosts: Catalouge
+  become: yes
+  tasks:
+    - name: Install Node.js repo
+      ansible.builtin.scripts: curl -sL https://rpm.nodesource.com/setup_lts.x | bash
+    
