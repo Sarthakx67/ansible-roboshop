@@ -47,4 +47,7 @@
         src: /tmp/catalogue.zip
         dest: /app
         remote_src: yes
+    - name: install catalogue artifact
+      community.general.npm:
+        path: /app
 
