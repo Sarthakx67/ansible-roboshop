@@ -32,7 +32,7 @@
       ansible.builtin.file:
         path: /app
         state: directory
-      when: directory.stat.exist == 'false' 
+      when: directory.stat.exist == false
     
     - name: print to check output
       ansible.builtin.debug:
