@@ -47,6 +47,10 @@
         src: /tmp/catalogue.zip
         dest: /app
         remote_src: yes
+    - name: install npm tool
+      ansible.builtin.apt:
+        name: npm
+        state: present
     - name: install catalogue artifact
       community.general.npm:
         path: /app
