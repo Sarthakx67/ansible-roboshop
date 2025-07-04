@@ -7,10 +7,9 @@
       ignore_errors: true
 
     - name: Install NodeJS
-      ansible.builtin.yum:
+      ansible.builtin.apt:
         name: nodejs
-        state: installed
-      ignore_errors: true  
+        state: present  
 
     - name: check Roboshop user exist or not
       ansible.builtin.command: id roboshop
