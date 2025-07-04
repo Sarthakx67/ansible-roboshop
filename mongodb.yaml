@@ -14,5 +14,5 @@
     ansible.builtin.service:
       name: mongod
       state: started
-      enabled: ye s
+      enabled: yes
     
