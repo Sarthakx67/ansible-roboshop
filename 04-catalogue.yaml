@@ -4,10 +4,14 @@
   tasks:
     - name: Install Node.js repo
       ansible.builtin.shell: curl -sL https://rpm.nodesource.com/setup_lts.x | bash
+      ignore_errors: true
+
     - name: Install NodeJS
       ansible.builtin.yum:
         name: nodejs
         state: installed
+      ignore_errors: true  
+
     - name: check Roboshop user exist or not
       ansible.builtin.command: id roboshop
       register: output
@@ -17,11 +21,13 @@
       name: Create user roboshop
       ansible.builtin.user:
         name: roboshop
+
     # ansible.builtin.stat is used to retrieve_file/file_system status information
     - name: check /app directory exist or not
       ansible.builtin.stat:
         path: /app
       register: directory
+      
     - name: print to check output
       ansible.builtin.debug:
         msg: "{{directory}}"
