@@ -34,9 +34,7 @@
         state: directory
       when: directory.stat.exists == false
     
-    - name: print to check output
-      ansible.builtin.debug:
-        msg: "{{directory}}"
-
-
-    
+    - name: Download catalogue artifact
+      ansible.builtin.get_url:
+        url: https://roboshop-builds.s3.amazonaws.com/catalogue.zip
+        dest: /tmp
