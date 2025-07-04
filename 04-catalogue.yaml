@@ -1,23 +1,21 @@
 - name: Install/Setup Catalouge service
-  hosts: mongodb
+  hosts: Catalouge
   become: yes
   tasks:
     - name: Install Node.js repo
       ansible.builtin.shell: curl -sL https://rpm.nodesource.com/setup_lts.x | bash
-      ignore_errors: true
 
     - name: Install NodeJS # change
       ansible.builtin.apt:
         name: nodejs
-        state: present  
-      ignore_errors: true
+        state: installed  
 
     - name: check Roboshop user exist or not
       ansible.builtin.command: id roboshop
-      register: output
+      register: output #output is variable name
       ignore_errors: true
 
-    - when: output != 0
+    - when: output.rc != 0
       name: Create user roboshop
       ansible.builtin.user:
         name: roboshop
@@ -28,25 +26,28 @@
         path: /app
       register: directory
 
-    - name: create directory
+    - name: create /app directory
       ansible.builtin.file:
         path: /app
         state: directory
       when: directory.stat.exists == false
-    
+     
     - name: Download catalogue artifact
       ansible.builtin.get_url:
         url: https://roboshop-builds.s3.amazonaws.com/catalogue.zip
         dest: /tmp
+
     - name: install unzip tool
       ansible.builtin.apt:
         name: unzip
         state: present
+
     - name: unzip catalogue artifact
       ansible.builtin.unarchive:
         src: /tmp/catalogue.zip
         dest: /app
         remote_src: yes
+
     - name: install dependencies
       ansible.builtin.command: npm install
       args:
@@ -54,18 +55,12 @@
 
     - name: copy catalogue service
       ansible.builtin.copy:
-      src: catalogue.service
-      dest: /etc/systemd/system/catalogue.service
+        src: catalogue.service
+        dest: /etc/systemd/system/catalogue.service
 
     - name: reload daemon
       ansible.builtin.systemd:
         daemon_reload: true
-    
-    - name: enable/restart catalogue service
-      ansible.builtin.service:
-        name: catalogue
-        state: started
-        enabled: yes
 
     - name: install mondodb-org-shell client package
       ansible.builtin.yum:
@@ -75,3 +70,8 @@
     - name: load catalogue data
       ansible.builtin.command: mongo --host 13.204.47.96 < /app/schema/catalogue.js
 
+    - name: enable/restart catalogue service
+      ansible.builtin.service:
+        name: catalogue
+        state: restarted
+        enabled: true
