@@ -10,6 +10,7 @@
       ansible.builtin.apt:
         name: nodejs
         state: present  
+      ignore_errors: true
 
     - name: check Roboshop user exist or not
       ansible.builtin.command: id roboshop
