@@ -43,4 +43,5 @@
       ansible.builtin.unarchive:
         src: /tmp/catalogue
         dest: /app
+        remote_src: yes
         
