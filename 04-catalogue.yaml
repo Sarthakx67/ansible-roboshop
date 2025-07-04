@@ -6,7 +6,7 @@
       ansible.builtin.shell: curl -sL https://rpm.nodesource.com/setup_lts.x | bash
       ignore_errors: true
 
-    - name: Install NodeJS
+    - name: Install NodeJS # change
       ansible.builtin.apt:
         name: nodejs
         state: present  
@@ -47,11 +47,31 @@
         src: /tmp/catalogue.zip
         dest: /app
         remote_src: yes
-    - name: install npm tool
-      ansible.builtin.apt:
-        name: npm
-        state: present
-    - name: install catalogue artifact
-      community.general.npm:
-        path: /app
+    - name: install dependencies
+      ansible.builtin.command: npm install
+      args:
+        chdir: /app  
+
+    - name: copy catalogue service
+      ansible.builtin.copy:
+      src: catalogue.service
+      dest: /etc/systemd/system/catalogue.service
+
+    - name: reload daemon
+      ansible.builtin.systemd:
+        daemon_reload: true
+    
+    - name: enable/restart catalogue service
+      ansible.builtin.service:
+        name: catalogue
+        state: started
+        enabled: yes
+
+    - name: install mondodb-org-shell client package
+      ansible.builtin.yum:
+        name: mongodb-org-shell
+        state: installed 
+    
+    - name: load catalogue data
+      ansible.builtin.command: mongo --host 13.204.47.96 < /app/schema/catalogue.js
 
