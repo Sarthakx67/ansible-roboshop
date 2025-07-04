@@ -1,2 +1,2 @@
-[web]
-01-web-node ansible_host=13.204.47.96
+[mongodb]
+01-mongodb-node ansible_host=13.204.47.96
