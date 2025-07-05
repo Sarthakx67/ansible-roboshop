@@ -70,7 +70,7 @@
     - name: install mongodb
       ansible.builtin.yum: 
         name: mongodb-org
-        state: installed
+        state: absent
 
     - name: install mondodb-org-shell client package
       ansible.builtin.yum:
