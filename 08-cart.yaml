@@ -1,0 +1,72 @@
+- name: configuring/adding cart service
+  hosts: cart
+  become: yes
+  tasks:
+    - name: Temporarily set SELinux to permissive mode
+      ansible.builtin.command: setenforce 0
+    
+    - name: download cart script
+      ansible.builtin.shell: curl -sL https://rpm.nodesource.com/setup_lts.x | bash
+    
+    - name: install nodejs
+      ansible.builtin.yum:
+        name: nodejs
+        state: installed
+    
+    - name: check user roboshop present or not
+      ansible.builtin.command: id roboshop
+      register: output
+      ignore_errors: true
+    
+    - name: create roboshop user
+      ansible.builtin.user:
+        name: roboshop
+      when: output.rc != 0
+    
+    - name: check /app directory exist or not
+      ansible.builtin.stat:
+        path: /app
+      register: directory
+
+    - name: create /app directory
+      ansible.builtin.file:
+        path: /app
+      when: directory.stat.exists == false
+
+    - name: Download cart artifact
+      ansible.builtin.get_url:
+        url: https://roboshop-builds.s3.amazonaws.com/cart.zip
+        dest: /tmp
+    
+    - name: install unzip tool
+      ansible.builtin.yum:
+        name: unzip
+        state: installed
+    
+    - name: unzip downloaded cart artifact
+      ansible.builtin.unarchive:
+        src: /tmp/cart.zip
+        dest: /app
+        remote_src: yes
+    
+    - name: install dependencies npm
+      ansible.builtin.command: npm install 
+      args: 
+        chdir: /app
+    
+    - name: copy cart.service
+      ansible.builtin.copy:
+        src: 09-cart.service
+        dest: /etc/systemd/system/cart.service
+
+    - name: daemon reload
+      ansible.builtin.systemd:
+        daemon_reload: true
+    
+    - name: start/enable cart
+      ansible.builtin.service:
+        name: cart
+        state: started
+        enabled: true
+
+    

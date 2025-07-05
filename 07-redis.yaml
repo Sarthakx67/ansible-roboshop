@@ -2,6 +2,8 @@
   hosts: redis
   become: yes
   tasks:
+    - name: Temporarily set SELinux to permissive mode
+      ansible.builtin.command: setenforce 0
     - name: Downloading redis repo
       ansible.builtin.command: yum install https://rpms.remirepo.net/enterprise/remi-release-8.rpm -y
     - name: enable redis
