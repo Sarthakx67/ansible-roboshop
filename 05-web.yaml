@@ -26,9 +26,9 @@
         dest: /tmp
 
     - name: install unzip tool
-      ansible.builtin.apt:
+      ansible.builtin.yum:
         name: unzip
-        state: present
+        state: installed
 
     - name: unzip web artifact
       ansible.builtin.unarchive:
