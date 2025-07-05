@@ -1,5 +1,5 @@
 - name: Install/Setup Catalouge service
-  hosts: catalouge
+  hosts: catalogue
   become: yes
   tasks:
     - name: Install Node.js repo
