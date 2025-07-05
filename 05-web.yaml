@@ -4,7 +4,7 @@
   tasks:
     - name: Temporarily set SELinux to permissive mode
       ansible.builtin.command: setenforce 0
-      
+
     - name: install nginx
       ansible.builtin.yum:
         name: nginx
@@ -47,5 +47,5 @@
     - name: restart nginx
       ansible.builtin.service:
         name: nginx
-        state: restarted
+        state: started
         enabled: yes 
