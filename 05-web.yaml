@@ -1,5 +1,5 @@
 - name: install/configure web componenet
-  hosts: web
+  hosts: webserver
   become: yes
   tasks:
     - name: install nginx
