@@ -27,6 +27,7 @@
       ansible.builtin.stat:
         path: /app
       register: directory
+      ignore_errors: yes
 
     - name: create /app directory
       ansible.builtin.file:
