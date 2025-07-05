@@ -8,3 +8,5 @@ mongodb-node ansible_host=13.203.66.202
 catalogue-node ansible_host=13.203.197.162 
 [webserver]
 web-server-node ansible_host=65.2.79.10
+[redis]
+redis-node ansible_host=13.233.120.108

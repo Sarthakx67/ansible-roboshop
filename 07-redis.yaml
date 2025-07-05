@@ -1,0 +1,13 @@
+- name: setup/configuring redis server
+  hosts: redis
+  become: yes
+  tasks:
+    - name: Downloading redis repo
+      ansible.builtin.command: yum install https://rpms.remirepo.net/enterprise/remi-release-8.rpm -y
+    - name: enable redis
+      ansible.builtin.command: yum module enable redis:remi-6.2 -y
+    - name: install redis
+      ansible.builtin.yum:
+        name: redis
+        state: installed
+    
