@@ -62,13 +62,23 @@
       ansible.builtin.systemd:
         daemon_reload: true
 
+    - name: copy mongodb repo file
+      ansible.builtin.copy:
+        src: 01-mongodb.repo
+        dest: /etc/yum.repos.d/mongo.repo
+    
+    - name: install mongodb
+      ansible.builtin.yum: 
+        name: mongodb-org
+        state: installed
+
     - name: install mondodb-org-shell client package
       ansible.builtin.yum:
         name: mongodb-org-shell
         state: installed 
     
     - name: load catalogue data
-      ansible.builtin.command: mongo --host 13.204.47.96 < /app/schema/catalogue.js
+      ansible.builtin.command: mongo --host 172.31.0.97 < /app/schema/catalogue.js
 
     - name: enable/restart catalogue service
       ansible.builtin.service:
