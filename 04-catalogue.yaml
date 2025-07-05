@@ -6,7 +6,7 @@
       ansible.builtin.shell: curl -sL https://rpm.nodesource.com/setup_lts.x | bash
 
     - name: Install NodeJS # change
-      ansible.builtin.apt:
+      ansible.builtin.yum:
         name: nodejs
         state: installed  
 
