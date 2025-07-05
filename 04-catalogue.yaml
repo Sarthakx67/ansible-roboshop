@@ -66,11 +66,6 @@
       ansible.builtin.copy:
         src: 01-mongodb.repo
         dest: /etc/yum.repos.d/mongo.repo
-    
-    - name: install mongodb
-      ansible.builtin.yum: 
-        name: mongodb-org
-        state: absent
 
     - name: install mondodb-org-shell client package
       ansible.builtin.yum:
