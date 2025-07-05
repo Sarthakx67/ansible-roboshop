@@ -1,6 +1,6 @@
 [mongodb]
-01-mongodb-node ansible_host=172.31.0.97
+01-mongodb-node ansible_host=13.203.66.202
 [catalogue]
-catalogue-node ansible_host=172.31.13.45
+catalogue-node ansible_host=13.203.197.162
 [web server]
-web-server-node ansible_host=172.31.9.104
+web-server-node ansible_host=65.2.79.10
