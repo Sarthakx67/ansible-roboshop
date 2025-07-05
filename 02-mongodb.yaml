@@ -2,6 +2,8 @@
   hosts: mongodb
   become: yes
   tasks:
+  - name: Temporarily set SELinux to permissive mode
+    ansible.builtin.command: setenforce 0
   - name: copy mongodb repo file
     ansible.builtin.copy:
       src: 01-mongodb.repo
