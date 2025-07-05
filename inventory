@@ -2,7 +2,7 @@
 01-mongodb-node ansible_host=13.203.66.202 
 [catalogue]
 catalogue-node ansible_host=13.203.197.162 
-[web server]
+[webserver]
 web-server-node ansible_host=65.2.79.10 
 ---
 ansible_user: ec2-user
