@@ -1,5 +1,6 @@
 [mongodb]
-01-mongodb-node ansible_host=13.203.66.202
+01-mongodb-node ansible_host=13.203.66.202 ansible_user=ec2-user
+ansible_ssh_private_key_file=~/ansible-roboshop/EC2-key.pem
 [catalogue]
 catalogue-node ansible_host=13.203.197.162
 [web server]
