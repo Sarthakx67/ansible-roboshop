@@ -10,4 +10,13 @@
       ansible.builtin.yum:
         name: redis
         state: installed
-    
+    - name: change redis access to 0.0.0.0 / global access
+      ansible.builtin.replace:
+        path: /etc/redis.conf
+        regexp: '127.0.0.1'
+        replace: '0.0.0.0'
+    - name: enable/start redis 
+      ansible.builtin.system:
+        name: redis
+        state: started
+        enabled: yes
