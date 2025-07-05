@@ -8,7 +8,7 @@
       dest: /etc/yum.repos.d/mongo.repo
       remote_src: yes
   - name: install mongodb
-    ansible.builtin.yum: c
+    ansible.builtin.yum: 
       name: mongodb-org
       state: installed
   - name: Starting and Enable mongodb server
