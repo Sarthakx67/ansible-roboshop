@@ -10,3 +10,5 @@ catalogue-node ansible_host=13.203.197.162
 web-server-node ansible_host=65.2.79.10
 [redis]
 redis-node ansible_host=13.233.120.108
+[cart]
+cart-node ansible_host=3.110.171.9
