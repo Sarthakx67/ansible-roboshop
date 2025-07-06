@@ -1,5 +1,5 @@
 - name: payments in RoboShop e-commerce app written on Python 3.6
-  hosts: payments
+  hosts: payment
   become: yes
   tasks: 
     - name: Install Python 3.6
