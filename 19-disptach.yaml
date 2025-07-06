@@ -1,0 +1,76 @@
+- name: install dispatch service
+  hosts: dispatch
+  become: yes
+  tasks:
+    - name: install goLang
+      ansible.builtin.yum:
+        name: golang
+        state: installed
+
+    - name: check user roboshop present or not
+      ansible.builtin.command: id roboshop
+      register: output
+      ignore_errors: true
+    
+    - name: create roboshop user
+      ansible.builtin.user:
+        name: roboshop
+      when: output.rc != 0
+    
+    - name: check /app directory exist or not
+      ansible.builtin.stat:
+        path: /app
+      register: directory
+      ignore_errors: yes
+
+    - name: create /app directory
+      ansible.builtin.file:
+        path: /app
+        state: directory
+      when: directory.stat.exists == false
+
+    - name: Download dispatch artifact
+      ansible.builtin.get_url:
+        url: https://roboshop-builds.s3.amazonaws.com/dispatch.zip
+        dest: /tmp
+    
+    - name: install unzip tool
+      ansible.builtin.yum:
+        name: unzip
+        state: installed
+
+    - name: unzip downloaded dispatch artifact
+      ansible.builtin.unarchive:
+        src: /tmp/dispatch.zip
+        dest: /app
+        remote_src: yes
+
+    - name: go land init 
+      ansible.builtin.command: go mod init dispatch
+      args: 
+        chdir: /app
+
+    - name: go land get
+      ansible.builtin.command: go get
+      args: 
+        chdir: /app
+    
+    - name: go land build 
+      ansible.builtin.command: go build
+      args: 
+        chdir: /app
+
+    - name: copy dependency files
+      ansible.builtin.copy:
+        src: 20-dispatch.service
+        dest: /etc/systemd/system/dispatch.service
+
+    - name: daemon reload
+      ansible.builtin.systemd:
+        daemon_reload: true
+    
+    - name: start/enable dispatch
+      ansible.builtin.service:
+        name: dispatch
+        state: restarted
+        enabled: true
