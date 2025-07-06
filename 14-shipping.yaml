@@ -122,9 +122,9 @@
 
   # We use a handler to ensure the service is only reloaded/restarted when the service file changes.
   handlers:
-    - name: Reload and Restart Shipping
+    - name: Reload and restart shipping service
       ansible.builtin.systemd:
         name: shipping
+        daemon_reload: yes
         state: restarted
         enabled: yes
-        daemon_reload: yes
