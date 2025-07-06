@@ -70,14 +70,11 @@
       community.mysql.mysql_query:
         login_user: root
         login_password: "{{ temp_mysql_password.stdout }}"
-        # This special option tells the client to allow connecting with an expired password
-        login_connect_timeout: 20
         query: "ALTER USER 'root'@'localhost' IDENTIFIED BY 'RoboShop@1';"
 
-    # A task to verify the new password 
+    # A task to verify the new password
     - name: Verify that the new root password is valid
       community.mysql.mysql_query:
         login_user: root
         login_password: "RoboShop@1" # Use the NEW password
         query: "SELECT 1;"
-      # This task will fail if the new password is wrong, confirming success.
