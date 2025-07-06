@@ -4,7 +4,7 @@
   become: yes
   vars:
     mysql_host: 172.31.15.68
-    cart_host: 172.31.8.30 # <-- IMPORTANT: Update this IP/DNS name
+    cart_host: 172.31.8.30 # This is correct based on previous logs
 
   pre_tasks:
     - name: Ensure Python 3 is installed
@@ -59,7 +59,6 @@
           User=roboshop
           Environment="CART_ENDPOINT={{ cart_host }}:8080"
           Environment="DB_HOST={{ mysql_host }}"
-          # --- CRITICAL CHANGE HERE ---
           Environment="DB_USER=shipping"
           Environment="DB_PASS=RoboShop@1"
           ExecStart=/usr/bin/java -jar /app/target/shipping-1.0.jar
@@ -69,7 +68,7 @@
           WantedBy=multi-user.target
       notify: Reload and restart shipping
 
-    # --- Database Schema Correction Block (using the simple, forceful method) ---
+    # --- Database Schema Correction Block ---
 
     - name: Load the initial schema into MySQL
       ansible.builtin.shell: "mysql -h {{ mysql_host }} -uroboshop -pRoboShop@1 < /app/db/schema.sql"
@@ -109,10 +108,7 @@
         login_db: shipping
         query: "RENAME TABLE cities TO shipping_details;"
       ignore_errors: true
-    
 
-  # --- HANDLERS BLOCK (This was the missing piece) ---
-  # Handlers are only run at the end of the play if they have been notified.
   handlers:
     - name: Reload and restart shipping
       ansible.builtin.systemd:

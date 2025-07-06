@@ -3,47 +3,32 @@
   hosts: mysql
   become: yes
   tasks:
-    # This block runs first to check if MySQL is already configured.
     - name: Check if the MySQL root password is already set
-      # We try to run a simple query with the final password.
-      # If this command succeeds, it means setup is complete.
-      # The 'rc' (return code) will be 0 on success.
       ansible.builtin.command: mysql -u root -p"RoboShop@1" -e "SELECT 1;"
       register: mysql_password_check
-      # We expect this to fail if the password is not set, so we ignore errors.
       ignore_errors: true
-      # This task should never report a change.
       changed_when: false
 
-    # This block contains all the setup tasks. It will only run if the
-    # previous check failed (i.e., the password is not set).
     - name: Run MySQL setup only if not already configured
       when: mysql_password_check.rc != 0
       block:
-        # Task 1: Bootstrap Python on the target node.
         - name: Ensure Python 3 is installed on the target
           ansible.builtin.raw: yum install -y python3
           changed_when: false
           ignore_errors: true
 
-        # Task 2: Install EPEL and PyMySQL using YUM (most reliable method).
-        - name: Install EPEL repository
+        - name: Install EPEL and PyMySQL using YUM
           ansible.builtin.yum:
-            name: epel-release
+            name:
+              - epel-release
+              - python3-PyMySQL
             state: present
 
-        - name: Install python3-PyMySQL package via YUM
-          ansible.builtin.yum:
-            name: python3-PyMySQL
-            state: present
-
-        # Task 3: Set SELinux to permissive. Using the module is idempotent.
         - name: Set SELinux to permissive mode permanently
           ansible.posix.selinux:
             policy: targeted
             state: permissive
 
-        # Task 4: Clean up any old, conflicting packages.
         - name: Remove conflicting mysql and mariadb packages
           ansible.builtin.yum:
             name:
@@ -58,8 +43,8 @@
             autoremove: yes
           ignore_errors: yes
 
-        - name: disable mysql-8 default module
-          ansible.builtin.command: yum module disable mysql -y 
+        - name: Disable mysql-8 default module
+          ansible.builtin.command: yum module disable mysql -y
           changed_when: false
 
         - name: copy MySQL 5.7 Server 
@@ -69,16 +54,13 @@
 
         - name: install mysql
           ansible.builtin.command: yum install mysql-community-server -y
-    
 
-        # Task 6: Start the service.
         - name: Start and enable the mysqld service
           ansible.builtin.service:
             name: mysqld
             state: started
             enabled: true
 
-        # get the temporary password.
         - name: Find the line containing the temporary root password
           ansible.builtin.lineinfile:
             path: /var/log/mysqld.log
@@ -88,30 +70,27 @@
           changed_when: false
           ignore_errors: yes
 
-        # Task 8: Set the new password using the most robust shell method.
         - name: Set the new root password using the mysql command-line client
           when: temp_password_line.found
           ansible.builtin.shell: >
             mysql -u root --password='{{ temp_password_line.line | regex_search(': (.*)') | regex_replace(': ', '') }}' --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'RoboShop@1';"
 
-    # This task runs after the block and is for creating the application user.
-    # It assumes the root password is now 'RoboShop@1'.
     - name: Create the 'roboshop' application user for remote access
       community.mysql.mysql_user:
         name: roboshop
-        host: '%' # Allows connection from any host in the private network
+        host: '%'
         password: "RoboShop@1"
         priv: '*.*:ALL,GRANT'
         state: present
         login_user: root
         login_password: "RoboShop@1"
-    
+
     - name: Create the 'shipping' application user for the Shipping service
       community.mysql.mysql_user:
-        name: shipping # The exact username the application requires
-        host: '%'     # Allow connection from any host in your private network
-        password: "RoboShop@1" # You can use the same password for simplicity
-        priv: 'shipping.*:ALL' # Grant ALL privileges ON the 'shipping' database TO this user
+        name: shipping
+        host: '%'
+        password: "RoboShop@1"
+        priv: '*.*:ALL,GRANT'
         state: present
         login_user: root
         login_password: "RoboShop@1"
