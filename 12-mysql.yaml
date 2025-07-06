@@ -68,8 +68,7 @@
     - name: Set the new root password using the mysql command line client
       when: temp_mysql_password.stdout != ""
       ansible.builtin.shell: >
-        mysql -u root --password="{{ temp_mysql_password.stdout }}" --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'RoboShop@1';"
-      # The > syntax allows for a multi-line command for readability.
+        mysql -u root --password='{{ temp_mysql_password.stdout }}' --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'RoboShop@1';"
 
     # A task to verify the new password works
     - name: Verify that the new root password is valid
