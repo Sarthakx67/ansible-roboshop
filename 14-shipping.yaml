@@ -1,5 +1,5 @@
 ---
-- name: Install and Configure Shipping Service (Forceful Method)
+- name: Install and Configure Shipping Service
   hosts: shipping
   become: yes
   vars:
@@ -66,14 +66,15 @@
 
           [Install]
           WantedBy=multi-user.target
+      # This tells Ansible to run the handler if this task makes a change.
       notify: Reload and restart shipping
 
-    # --- SIMPLIFIED DATABASE BLOCK ---
+    # --- Database Schema Correction Block (using the simple, forceful method) ---
 
     - name: Load the initial schema into MySQL
       ansible.builtin.shell: "mysql -h {{ mysql_host }} -uroboshop -pRoboShop@1 < /app/db/schema.sql"
       changed_when: false
-      ignore_errors: true # Ignore errors if the DB/tables already exist
+      ignore_errors: true
 
     - name: Create the 'shipping' database
       community.mysql.mysql_db:
@@ -89,7 +90,7 @@
         login_password: "RoboShop@1"
         login_host: "{{ mysql_host }}"
         query: "RENAME TABLE cities.cities TO shipping.cities;"
-      ignore_errors: true # Ignore error if table was already moved
+      ignore_errors: true
 
     - name: Drop the old 'cities' database
       community.mysql.mysql_db:
@@ -98,7 +99,7 @@
         login_user: roboshop
         login_password: "RoboShop@1"
         login_host: "{{ mysql_host }}"
-      ignore_errors: true # Ignore error if DB was already dropped
+      ignore_errors: true
 
     - name: Rename table inside 'shipping' DB to 'shipping_details'
       community.mysql.mysql_query:
@@ -107,14 +108,14 @@
         login_host: "{{ mysql_host }}"
         login_db: shipping
         query: "RENAME TABLE cities TO shipping_details;"
-      ignore_errors: true # Ignore error if table was already renamed
+      ignore_errors: true
 
-    - name: Ensure systemd reloads the new service file
+  # --- HANDLERS BLOCK (This was the missing piece) ---
+  # Handlers are only run at the end of the play if they have been notified.
+  handlers:
+    - name: Reload and restart shipping
       ansible.builtin.systemd:
-        daemon_reload: yes
-
-    - name: Enable and start the shipping service
-      ansible.builtin.service:
         name: shipping
-        state: started
+        daemon_reload: yes
+        state: restarted
         enabled: yes
