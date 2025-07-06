@@ -99,17 +99,16 @@
       register: cities_db_check
 
     - name: Rename the 'cities' database to 'shipping' if it exists
-      # This task is the core of the fix. It is atomic and idempotent.
-      when: cities_db_check.rowcount > 0
+  # --- THE FIX IS HERE ---
+      when: cities_db_check.rowcount[0] > 0
       community.mysql.mysql_query:
         login_user: roboshop
         login_password: "RoboShop@1"
         login_host: 172.31.15.68
         query:
-          - "CREATE DATABASE IF NOT EXISTS shipping;" # Create the target DB first
-          - "RENAME TABLE cities.cities TO shipping.cities;" # Move the table
-          - "DROP DATABASE cities;" # Drop the old, now-empty database
-      # We use a multi-query block to do this safely.
+          - "CREATE DATABASE IF NOT EXISTS shipping;"
+          - "RENAME TABLE cities.cities TO shipping.cities;"
+          - "DROP DATABASE cities;"
 
     - name: Check if the 'cities' table needs renaming inside the 'shipping' database
       community.mysql.mysql_query:
@@ -122,15 +121,11 @@
 
     - name: Rename the 'cities' table to 'shipping_details' for clarity
       # This is an optional but good step if your app expects 'shipping_details'
-      when: cities_table_check.rowcount > 0
+      when: cities_table_check.rowcount[0] > 0
       community.mysql.mysql_query:
         login_user: roboshop
         login_password: "RoboShop@1"
         login_host: 172.31.15.68
         login_db: shipping
         query: "RENAME TABLE cities TO shipping_details;"
-    - name: restart shipping
-      ansible.builtin.service:
-        name: shipping
-        state: restarted
     
