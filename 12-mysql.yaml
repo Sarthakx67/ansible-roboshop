@@ -1,5 +1,5 @@
 - name: install/configure mysql
-  host: mysql
+  hosts: mysql
   become: yes
   tasks: 
     - name: disable mysql-8 default module
