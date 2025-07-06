@@ -70,17 +70,22 @@
 
     # --- SIMPLIFIED DATABASE BLOCK ---
 
-    - name: Load the application schema into MySQL
-      # This creates the 'cities' database and its tables. We will NOT rename it.
+    - name: Load the application schema (creates 'cities' db)
       ansible.builtin.shell: "mysql -h {{ mysql_host }} -uroboshop -pRoboShop@1 < /app/db/schema.sql"
       changed_when: false
-      ignore_errors: true # Ignore errors if schema already exists
-    
+      ignore_errors: true
+
     - name: Rename the 'cities' table to 'codes' as expected by the application
       ansible.builtin.shell: "mysql -h {{ mysql_host }} -uroboshop -pRoboShop@1 cities -e 'RENAME TABLE cities TO codes;'"
-      # We ignore errors because this will fail on re-runs, which is okay.
       ignore_errors: true
-      changed_when: false # This isn't a configuration change we need to track.
+      changed_when: false
+
+    # --- THIS IS THE FINAL FIX ---
+    - name: Load the master data into the 'cities' database
+      # This populates the 'codes' table with the required shipping options.
+      ansible.builtin.shell: "mysql -h {{ mysql_host }} -uroboshop -pRoboShop@1 cities < /app/db/master-data.sql"
+      changed_when: false
+      ignore_errors: true
 
   handlers:
     - name: Reload and restart shipping
