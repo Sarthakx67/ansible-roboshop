@@ -10,6 +10,15 @@
     - name: Temporarily set SELinux to permissive mode
       ansible.builtin.command: setenforce 0
 
+    - name: Remove conflicting mysql/mariadb packages
+      ansible.builtin.yum:
+        name:
+          - mysql
+          - mysql-common
+          - mysql-libs
+          - mariadb-libs # Often conflicts with MySQL
+        state: absent
+
     - name: disable mysql-8 default module
       ansible.builtin.command: yum module disable mysql -y 
     
