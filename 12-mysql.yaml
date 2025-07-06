@@ -2,6 +2,14 @@
   hosts: mysql
   become: yes
   tasks: 
+    - name: install extra packages for enterprise linux
+      ansible.builtin.yum:
+        name: epel-release
+        state: installed
+
+    - name: Temporarily set SELinux to permissive mode
+      ansible.builtin.command: setenforce 0
+
     - name: disable mysql-8 default module
       ansible.builtin.yum:
         name: mysql
