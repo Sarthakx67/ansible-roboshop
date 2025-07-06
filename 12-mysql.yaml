@@ -58,7 +58,7 @@
         - name: Start and enable the mysqld service
           ansible.builtin.service:
             name: mysqld
-            state: started
+            state: restarted
             enabled: true
 
         - name: Find the line containing the temporary root password

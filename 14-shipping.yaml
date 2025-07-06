@@ -4,7 +4,7 @@
   become: yes
   vars:
     mysql_host: 172.31.15.68
-    cart_host: 172.31.8.30 # This is correct based on previous logs
+    cart_host: 172.31.8.30 # This should be your Cart service IP
 
   pre_tasks:
     - name: Ensure Python 3 is installed
@@ -68,46 +68,17 @@
           WantedBy=multi-user.target
       notify: Reload and restart shipping
 
-    # --- Database Schema Correction Block ---
+    # --- SIMPLIFIED DATABASE BLOCK ---
 
-    - name: Load the initial schema into MySQL
+    - name: Load the application schema into MySQL
+      # This creates the 'cities' database and its tables. We will NOT rename it.
       ansible.builtin.shell: "mysql -h {{ mysql_host }} -uroboshop -pRoboShop@1 < /app/db/schema.sql"
       changed_when: false
-      ignore_errors: true
+      ignore_errors: true # Ignore errors if schema already exists
 
-    - name: Create the 'shipping' database
-      community.mysql.mysql_db:
-        name: shipping
-        state: present
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: "{{ mysql_host }}"
-
-    - name: Rename the table from 'cities' DB to 'shipping' DB
-      community.mysql.mysql_query:
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: "{{ mysql_host }}"
-        query: "RENAME TABLE cities.cities TO shipping.cities;"
-      ignore_errors: true
-
-    - name: Drop the old 'cities' database
-      community.mysql.mysql_db:
-        name: cities
-        state: absent
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: "{{ mysql_host }}"
-      ignore_errors: true
-
-    - name: Rename table inside 'shipping' DB to 'shipping_details'
-      community.mysql.mysql_query:
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: "{{ mysql_host }}"
-        login_db: shipping
-        query: "RENAME TABLE cities TO shipping_details;"
-      ignore_errors: true
+    # --- TASKS REMOVED ---
+    # All of the complex tasks for creating, checking, and renaming databases and
+    # tables have been removed. We are accepting the schema as-is.
 
   handlers:
     - name: Reload and restart shipping
