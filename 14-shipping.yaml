@@ -59,6 +59,8 @@
           User=roboshop
           Environment="CART_ENDPOINT={{ cart_host }}:8080"
           Environment="DB_HOST={{ mysql_host }}"
+          Environment="DB_USER=roboshop"
+          Environment="DB_PASS=RoboShop@1"
           ExecStart=/usr/bin/java -jar /app/target/shipping-1.0.jar
           SyslogIdentifier=shipping
 
