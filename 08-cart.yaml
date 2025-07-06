@@ -53,6 +53,8 @@
     
     - name: install dependencies npm
       ansible.builtin.command: npm ci
+      #The npm ci  performs a clean install strictly based on the package-lock.json file,
+      #ensuring you get the correct versions.
       args: 
         chdir: /app
     
