@@ -23,3 +23,5 @@ shipping-node ansible_host=172.31.3.180
 rabbitmq-node ansible_host=172.31.14.111
 [payment]
 payment-node ansible_host=172.31.12.218
+[dispatch]
+dispatch-node ansible_host=172.31.8.72
