@@ -1,0 +1,8 @@
+- name: install/configure mysql
+  host: mysql
+  become: yes
+  tasks: 
+    - name: disable mysql-8 default module
+      ansible.builtin.yum:
+        name: mysql
+        disablerepo: "mysql"
