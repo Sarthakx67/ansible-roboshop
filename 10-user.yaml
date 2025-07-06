@@ -1,0 +1,87 @@
+- name: configuring user service
+  hosts: user
+  become: yes
+  tasks: 
+    - name: Temporarily set SELinux to permissive mode
+      ansible.builtin.command: setenforce 0
+
+    - name: installing nodejs repo
+      ansible.builtin.shell: curl -sL https://rpm.nodesource.com/setup_lts.x | bash
+
+    - name: install nodejs
+      ansible.builtin.yum:
+        name: nodejs
+        state: installed
+    - name: check if roboshop user install or not
+      ansible.builtin.command: id roboshop
+      register: output
+      ignore_errors: true
+
+    - name: add roboshop user
+      ansible.builtin.user:
+        name: roboshop
+      when: output.rc != 0
+
+    - name: check /app directory exist or not
+      ansible.builtin.stat:
+        path: /app
+      register: directory
+      ignore_errors: yes
+
+    - name: create /app directory
+      ansible.builtin.file:
+        path: /app
+        state: directory
+      when: directory.stat.exists == false
+
+    - name: Download user artifact
+      ansible.builtin.get_url:
+        url: https://roboshop-builds.s3.amazonaws.com/user.zip
+        dest: /tmp
+    
+    - name: install unzip tool
+      ansible.builtin.yum:
+        name: unzip
+        state: installed
+
+    - name: unzip downloaded user artifact
+      ansible.builtin.unarchive:
+        src: /tmp/user.zip
+        dest: /app
+        remote_src: yes
+
+    - name: install dependencies npm
+      ansible.builtin.command: npm ci
+      #The npm ci  performs a clean install strictly based on the package-lock.json file,
+      #ensuring you get the correct versions.
+      args: 
+        chdir: /app
+
+    - name: copy user service
+      ansible.builtin.copy:
+        src: 11-user.service
+        dest: /etc/systemd/system/user.service
+
+    - name: daemon reload
+      ansible.builtin.systemd:
+        daemon_reload: true
+    
+    - name: start/enable user
+      ansible.builtin.service:
+        name: user
+        state: restarted
+        enabled: true
+
+    - name: copy mongodb repo
+      ansible.builtin.copy:
+        src: 01-mongodb.repo
+        dest: /etc/yum.repos.d/mongo.repo
+    
+    - name: install mongodb shell
+      ansible.builtin.yum:
+        name: mongodb-org-shell
+        state: installed
+
+    - name: load schemas
+      ansible.builtin.command: mongo --host 172.31.6.164 < /app/schema/user.js
+      ignore_errors: yes
