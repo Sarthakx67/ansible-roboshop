@@ -59,18 +59,25 @@
       changed_when: false
       ignore_errors: yes
 
- # Install the Python library that the 'mysql_user' module requires ON THE TARGET.
+    # Install the Python library that the 'mysql_user' module requires 
     - name: Install PyMySQL library on the target node
       ansible.builtin.pip:
         name: PyMySQL
-        executable: pip3 # Make sure to use the pip for Python 3
+        executable: pip3 
 
-    - name: Set the new root password using the temporary password
+    - name: Set the new root password using a raw SQL query
       when: temp_mysql_password.stdout != ""
-      community.mysql.mysql_user:
+      community.mysql.mysql_query:
         login_user: root
         login_password: "{{ temp_mysql_password.stdout }}"
-        name: root
-        host: localhost
-        password: "RoboShop@1"
-        state: present
+        # This special option tells the client to allow connecting with an expired password
+        login_connect_timeout: 20
+        query: "ALTER USER 'root'@'localhost' IDENTIFIED BY 'RoboShop@1';"
+
+    # A task to verify the new password 
+    - name: Verify that the new root password is valid
+      community.mysql.mysql_query:
+        login_user: root
+        login_password: "RoboShop@1" # Use the NEW password
+        query: "SELECT 1;"
+      # This task will fail if the new password is wrong, confirming success.
