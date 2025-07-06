@@ -17,4 +17,3 @@ cart-node ansible_host=172.31.8.30
 user-node ansible_host=172.31.14.139
 [mysql]
 mysql-node ansible_host=172.31.15.68
-ansible_python_interpreter=/usr/bin/python3

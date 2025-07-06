@@ -1,6 +1,13 @@
 - name: install/configure mysql
   hosts: mysql
   become: yes
+  pre_tasks:
+    - name: Ensure Python 3 is installed on the target (prerequisite for Ansible)
+      ansible.builtin.raw: yum install -y python3
+      changed_when: false
+      # We ignore errors in case python3 is already installed.
+      # The 'raw' module is used because it doesn't require Python on the target.
+      ignore_errors: true
   tasks: 
     - name: install extra packages for enterprise linux
       ansible.builtin.yum:
