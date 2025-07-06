@@ -77,20 +77,10 @@
       ignore_errors: true # Ignore errors if schema already exists
     
     - name: Rename the 'cities' table to 'codes' as expected by the application
-      community.mysql.mysql_query:
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: "{{ mysql_host }}"
-        login_db: cities
-        # This is the simple, direct rename command.
-        query: "RENAME TABLE cities TO codes;"
-      # We ignore errors because on the second run, this command will fail
-      # saying the 'cities' table doesn't exist, which is what we want.
-      ignore_errors: true"
-
-    # --- TASKS REMOVED ---
-    # All of the complex tasks for creating, checking, and renaming databases and
-    # tables have been removed. We are accepting the schema as-is.
+      ansible.builtin.shell: "mysql -h {{ mysql_host }} -uroboshop -pRoboShop@1 cities -e 'RENAME TABLE cities TO codes;'"
+      # We ignore errors because this will fail on re-runs, which is okay.
+      ignore_errors: true
+      changed_when: false # This isn't a configuration change we need to track.
 
   handlers:
     - name: Reload and restart shipping
