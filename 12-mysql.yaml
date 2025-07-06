@@ -76,3 +76,13 @@
       ansible.builtin.command: mysql -u root -p"RoboShop@1" -e "SELECT 1;"
       # We use command here because it's simpler and will fail if the password is wrong.
       # Note the lack of a space between -p and the password. This is required for non-interactive use.
+
+    - name: Create the application database user
+      community.mysql.mysql_user:
+        name: roboshop
+        host: '%'  # '%' allows connection from any host in your private network
+        password: "RoboShop@1" # Use the same password for simplicity in this project
+        priv: '*.*:ALL,GRANT' # Grant all privileges on all databases
+        state: present
+        login_user: root
+        login_password: "RoboShop@1" # Login as root to create the new user
