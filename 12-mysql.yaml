@@ -65,16 +65,14 @@
         name: PyMySQL
         executable: pip3 
 
-    - name: Set the new root password using a raw SQL query
+    - name: Set the new root password using the mysql command line client
       when: temp_mysql_password.stdout != ""
-      community.mysql.mysql_query:
-        login_user: root
-        login_password: "{{ temp_mysql_password.stdout }}"
-        query: "ALTER USER 'root'@'localhost' IDENTIFIED BY 'RoboShop@1';"
+      ansible.builtin.shell: >
+        mysql -u root --password="{{ temp_mysql_password.stdout }}" --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'RoboShop@1';"
+      # The > syntax allows for a multi-line command for readability.
 
-    # A task to verify the new password
+    # A task to verify the new password works
     - name: Verify that the new root password is valid
-      community.mysql.mysql_query:
-        login_user: root
-        login_password: "RoboShop@1" # Use the NEW password
-        query: "SELECT 1;"
+      ansible.builtin.command: mysql -u root -p"RoboShop@1" -e "SELECT 1;"
+      # We use command here because it's simpler and will fail if the password is wrong.
+      # Note the lack of a space between -p and the password. This is required for non-interactive use.
