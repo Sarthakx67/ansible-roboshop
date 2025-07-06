@@ -63,6 +63,13 @@
         chdir: /app
       ignore_errors: yes
 
+    - name: Set ownership of /app directory to the roboshop user
+      ansible.builtin.file:
+        path: /app
+        owner: roboshop
+        group: roboshop
+        recurse: yes # Make sure to apply ownership to all files inside
+
     - name: copy dependency files
       ansible.builtin.copy:
         src: 20-dispatch.service
