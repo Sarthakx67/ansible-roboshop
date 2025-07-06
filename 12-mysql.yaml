@@ -16,6 +16,7 @@
           - mysql
           - mysql-common
           - mysql-libs
+          - mariadb-libs
         state: absent
 
     - name: disable mysql-8 default module
