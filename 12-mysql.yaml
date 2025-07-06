@@ -16,20 +16,28 @@
           - mysql
           - mysql-common
           - mysql-libs
-          - mariadb-libs # Often conflicts with MySQL
         state: absent
 
     - name: disable mysql-8 default module
       ansible.builtin.command: yum module disable mysql -y 
     
-    - name: copy mysql repo
-      ansible.builtin.copy:
-        src: 13-mysql.repo
-        dest: /etc/yum.repos.d/mysql.repo
+    - name: install centos 8 mysql repo
+      ansible.builtin.yum:
+          name: https://dev.mysql.com/get/mysql80-community-release-el8-1.noarch.rpm
+          state: present
+          disable_gpg_check: yes # Sometimes needed for direct RPM installs via URL
     
-    - name: install mysql 
-      ansible.builtin.command: yum install mysql-community-server -y
+    - name: Disable the mysql80-community repository
+      community.general.yum_repository:
+        name: mysql80-community
+        enabled: no
 
+    - name: Install MySQL 5.7 Server and its dependencies
+      ansible.builtin.yum:
+        name: mysql-community-server
+        state: present
+        # This will now pull the correct mysql-community-server-5.7.x-1.el8 package
+    
     - name: enable/start mysql
       ansible.builtin.service:
         name: mysqld
