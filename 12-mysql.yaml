@@ -14,10 +14,15 @@
       ansible.builtin.yum:
         name:
           - mysql
-          - mysql-common
+          - mysql-server
           - mysql-libs
+          - mysql-common
+          - mariadb
           - mariadb-libs
+          - mariadb-connector-c-config
         state: absent
+        autoremove: yes # Remove any unused dependencies as well
+        ignore_errors: yes # Ignore errors if a package is already removed
 
     - name: disable mysql-8 default module
       ansible.builtin.command: yum module disable mysql -y 
