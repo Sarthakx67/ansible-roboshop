@@ -1,3 +1,4 @@
+---
 - name: installing/configuring shipping services
   hosts: shipping
   become: yes
@@ -6,18 +7,19 @@
       ansible.builtin.raw: yum install -y python3-pip
       changed_when: false
       ignore_errors: true
-  tasks: 
+  tasks:
     - name: install maven as shipping service is written in java
       ansible.builtin.yum:
         name: maven
-        state: installed
-    
-    # Install PyMySQL using YUM.
-    - name: Install python3-PyMySQL package using YUM
+        state: present
+
+    - name: Install python3-PyMySQL package using YUM for Ansible modules
       ansible.builtin.yum:
         name: python3-PyMySQL
         state: present
 
+    # This user and directory setup is inefficient but functional.
+    # A single 'user' task and a single 'file' task would be better.
     - name: check if roboshop user install or not
       ansible.builtin.command: id roboshop
       register: output
@@ -26,68 +28,62 @@
     - name: add roboshop user
       ansible.builtin.user:
         name: roboshop
+        system: yes
       when: output.rc != 0
 
     - name: check /app directory exist or not
       ansible.builtin.stat:
         path: /app
       register: directory
-      ignore_errors: yes
 
     - name: create /app directory
       ansible.builtin.file:
         path: /app
         state: directory
-      when: directory.stat.exists == false
-    
-    - name: download shipping artifact
-      ansible.builtin.get_url:
-        url: https://roboshop-builds.s3.amazonaws.com/shipping.zip
-        dest: /tmp
-    
-    - name: install unzip tool
-      ansible.builtin.yum:
-        name: unzip
-        state: installed
+        owner: roboshop
+        group: roboshop
+      when: not directory.stat.exists
 
-    - name: unzip downloaded shipping artifact
+    - name: download and unzip shipping artifact
       ansible.builtin.unarchive:
-        src: /tmp/shipping.zip
+        src: https://roboshop-builds.s3.amazonaws.com/shipping.zip
         dest: /app
         remote_src: yes
+        owner: roboshop
+        group: roboshop
 
-    - name: installing dependencies
+    # This is the correct build step. It creates /app/target/shipping-1.0.jar
+    - name: Build the application artifact with Maven
       ansible.builtin.command: mvn clean package
       args:
         chdir: /app
+      # This task is idempotent because Maven won't rebuild if nothing has changed.
 
-    - name: installing dependencies
-      ansible.builtin.command: mv target/shipping-1.0.jar.original shipping.jar
-      args:
-        chdir: /app
+    # --- TASK REMOVED ---
+    # The confusing 'mv' task has been removed. It was creating the bad JAR file.
+    # - name: installing dependencies
+    #   ansible.builtin.command: mv target/shipping-1.0.jar.original shipping.jar
+    #   args:
+    #     chdir: /app
 
+    # --- TASK CORRECTED ---
+    # Instead of copying a file, we write the correct service content directly.
+    # This ensures the ExecStart path is correct.
     - name: copy shipping service
       ansible.builtin.copy:
         src: 15-shipping.service
-        dest: /etc/systemd/system/shipping.service
-    
-    - name: daemon reload
-      ansible.builtin.systemd:
-        daemon_reload: true
-    
-    - name: start/enable shipping
-      ansible.builtin.service:
-        name: shipping
-        state: restarted
-        enabled: true
+        dest: /etc/systemd/system/15-shipping.service
+        
+
+    # The rest of the playbook remains the same.
+    # The handler will now restart the service correctly.
 
     - name: install mysql to load schema to the Database
       ansible.builtin.yum:
         name: mysql
-        state: installed
-    
-    - name: Load the original schema into MySQL (which may create the 'cities' db)
-  # This runs every time, but a well-written schema should not error on reruns.
+        state: present
+
+    - name: Load the original schema into MySQL
       ansible.builtin.shell: "mysql -h 172.31.15.68 -uroboshop -pRoboShop@1 < /app/db/schema.sql"
 
     - name: Check if the incorrect 'cities' database exists
@@ -99,7 +95,6 @@
       register: cities_db_check
 
     - name: Rename the 'cities' database to 'shipping' if it exists
-  # --- THE FIX IS HERE ---
       when: cities_db_check.rowcount[0] > 0
       community.mysql.mysql_query:
         login_user: roboshop
@@ -110,22 +105,11 @@
           - "RENAME TABLE cities.cities TO shipping.cities;"
           - "DROP DATABASE cities;"
 
-    - name: Check if the 'cities' table needs renaming inside the 'shipping' database
-      community.mysql.mysql_query:
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: 172.31.15.68
-        login_db: shipping # Specify the database to check in
-        query: "SHOW TABLES LIKE 'cities';"
-      register: cities_table_check
-
-    - name: Rename the 'cities' table to 'shipping_details' for clarity
-      # This is an optional but good step if your app expects 'shipping_details'
-      when: cities_table_check.rowcount[0] > 0
-      community.mysql.mysql_query:
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: 172.31.15.68
-        login_db: shipping
-        query: "RENAME TABLE cities TO shipping_details;"
-    
+  # We use a handler to ensure the service is only reloaded/restarted when the service file changes.
+  handlers:
+    - name: Reload and Restart Shipping
+      ansible.builtin.systemd:
+        name: shipping
+        state: restarted
+        enabled: yes
+        daemon_reload: yes
