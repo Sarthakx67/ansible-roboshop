@@ -49,16 +49,19 @@
       ansible.builtin.command: go mod init dispatch
       args: 
         chdir: /app
+      ignore_errors: yes
 
     - name: go lang get
       ansible.builtin.command: go get
       args: 
         chdir: /app
+      ignore_errors: yes
     
     - name: go lang build 
       ansible.builtin.command: go build
       args: 
         chdir: /app
+      ignore_errors: yes
 
     - name: copy dependency files
       ansible.builtin.copy:
