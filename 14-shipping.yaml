@@ -1,47 +1,41 @@
 ---
-- name: Install and Configure Shipping Service
+- name: Install and Configure Shipping Service (Forceful Method)
   hosts: shipping
   become: yes
   vars:
-    # Define the IP of your MySQL server here for easy changes.
     mysql_host: 172.31.15.68
-    # Define the IP/DNS of your Cart service here.
-    # THIS MUST BE UPDATED with your actual Cart service IP/DNS.
-    cart_host: 172.31.8.30
+    cart_host: 172.31.8.30 # <-- IMPORTANT: Update this IP/DNS name
 
-  # This block runs first to install prerequisites Ansible needs to function.
   pre_tasks:
-    - name: Ensure Python 3 is installed on the target
+    - name: Ensure Python 3 is installed
       ansible.builtin.raw: yum install -y python3
       changed_when: false
       ignore_errors: true
 
   tasks:
-    - name: Install prerequisite packages (EPEL, Maven, MySQL Client, Python libs)
+    - name: Install prerequisite packages
       ansible.builtin.yum:
         name:
           - epel-release
           - maven
-          - git
-          - unzip
           - mysql
-          - python3-PyMySQL # The reliable way to install the required Python library
+          - python3-PyMySQL
         state: present
 
-    - name: Create the Roboshop application user
+    - name: Create Roboshop application user
       ansible.builtin.user:
         name: roboshop
         system: yes
         state: present
 
-    - name: Create the application directory /app
+    - name: Ensure /app directory exists
       ansible.builtin.file:
         path: /app
         state: directory
         owner: roboshop
         group: roboshop
 
-    - name: Download and unpack the shipping application artifact
+    - name: Download and unpack shipping artifact
       ansible.builtin.unarchive:
         src: https://roboshop-builds.s3.amazonaws.com/shipping.zip
         dest: /app
@@ -49,12 +43,12 @@
         owner: roboshop
         group: roboshop
 
-    - name: Build the application with Maven
+    - name: Build application with Maven
       ansible.builtin.command: mvn clean package
       args:
         chdir: /app
 
-    - name: Create and configure the shipping systemd service file
+    - name: Create shipping systemd service file
       ansible.builtin.copy:
         dest: /etc/systemd/system/shipping.service
         content: |
@@ -72,23 +66,14 @@
           WantedBy=multi-user.target
       notify: Reload and restart shipping
 
-    # --- Database Schema Correction Block ---
+    # --- SIMPLIFIED DATABASE BLOCK ---
 
-    - name: Load the original schema into MySQL
+    - name: Load the initial schema into MySQL
       ansible.builtin.shell: "mysql -h {{ mysql_host }} -uroboshop -pRoboShop@1 < /app/db/schema.sql"
       changed_when: false
+      ignore_errors: true # Ignore errors if the DB/tables already exist
 
-    - name: Check if the incorrect 'cities' database still exists
-      community.mysql.mysql_query:
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: "{{ mysql_host }}"
-        query: "SHOW DATABASES LIKE 'cities';"
-      register: cities_db_check
-      # This task is necessary to decide if we need to rename.
-
-    - name: Create the 'shipping' database if it doesn't exist
-      # We do this separately to prevent errors in the RENAME step.
+    - name: Create the 'shipping' database
       community.mysql.mysql_db:
         name: shipping
         state: present
@@ -96,43 +81,32 @@
         login_password: "RoboShop@1"
         login_host: "{{ mysql_host }}"
 
-    - name: Move the table from 'cities' to 'shipping' database
-      # This block will only run if the 'cities' database was found.
-      when: cities_db_check.rowcount[0] > 0
-      block:
-        - name: Check if the destination table 'shipping.cities' already exists
-          community.mysql.mysql_query:
-            login_user: roboshop
-            login_password: "RoboShop@1"
-            login_host: "{{ mysql_host }}"
-            query: "SHOW TABLES IN shipping LIKE 'cities';"
-          register: dest_table_check
+    - name: Rename the table from 'cities' DB to 'shipping' DB
+      community.mysql.mysql_query:
+        login_user: roboshop
+        login_password: "RoboShop@1"
+        login_host: "{{ mysql_host }}"
+        query: "RENAME TABLE cities.cities TO shipping.cities;"
+      ignore_errors: true # Ignore error if table was already moved
 
-        - name: Rename table only if destination does not exist
-          when: dest_table_check.rowcount[0] == 0
-          community.mysql.mysql_query:
-            login_user: roboshop
-            login_password: "RoboShop@1"
-            login_host: "{{ mysql_host }}"
-            query: "RENAME TABLE cities.cities TO shipping.cities;"
+    - name: Drop the old 'cities' database
+      community.mysql.mysql_db:
+        name: cities
+        state: absent
+        login_user: roboshop
+        login_password: "RoboShop@1"
+        login_host: "{{ mysql_host }}"
+      ignore_errors: true # Ignore error if DB was already dropped
 
-        - name: Drop the old 'cities' database (now empty)
-          community.mysql.mysql_db:
-            name: cities
-            state: absent
-            login_user: roboshop
-            login_password: "RoboShop@1"
-            login_host: "{{ mysql_host }}"
-
-    - name: Rename 'cities' table to 'shipping_details' inside the shipping database
+    - name: Rename table inside 'shipping' DB to 'shipping_details'
       community.mysql.mysql_query:
         login_user: roboshop
         login_password: "RoboShop@1"
         login_host: "{{ mysql_host }}"
         login_db: shipping
-        query: "RENAME TABLE IF EXISTS cities TO shipping_details;"
+        query: "RENAME TABLE cities TO shipping_details;"
+      ignore_errors: true # Ignore error if table was already renamed
 
-  # Handlers are only run if a task "notifies" them. This is efficient.
   handlers:
     - name: Reload and restart shipping
       ansible.builtin.systemd:
