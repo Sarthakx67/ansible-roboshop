@@ -59,14 +59,14 @@
           User=roboshop
           Environment="CART_ENDPOINT={{ cart_host }}:8080"
           Environment="DB_HOST={{ mysql_host }}"
-          Environment="DB_USER=roboshop"
+          # --- CRITICAL CHANGE HERE ---
+          Environment="DB_USER=shipping"
           Environment="DB_PASS=RoboShop@1"
           ExecStart=/usr/bin/java -jar /app/target/shipping-1.0.jar
           SyslogIdentifier=shipping
 
           [Install]
           WantedBy=multi-user.target
-      # This tells Ansible to run the handler if this task makes a change.
       notify: Reload and restart shipping
 
     # --- Database Schema Correction Block (using the simple, forceful method) ---
@@ -110,15 +110,6 @@
         query: "RENAME TABLE cities TO shipping_details;"
       ignore_errors: true
     
-    - name: Create the 'shipping' application user for the Shipping service
-      community.mysql.mysql_user:
-        name: shipping # The exact username the application requires
-        host: '%'     # Allow connection from any host in your private network
-        password: "RoboShop@1" # You can use the same password for simplicity
-        priv: 'shipping.*:ALL' # Grant ALL privileges ON the 'shipping' database TO this user
-        state: present
-        login_user: root
-        login_password: "RoboShop@1"
 
   # --- HANDLERS BLOCK (This was the missing piece) ---
   # Handlers are only run at the end of the play if they have been notified.
