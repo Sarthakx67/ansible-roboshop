@@ -6,3 +6,20 @@
       ansible.builtin.yum:
         name: mysql
         disablerepo: "mysql"
+    
+    - name: copy mysql repo
+      ansible.builtin.copy:
+        src: 13-mysql.repo
+        dest: /etc/yum.repos.d/mysql.repo
+    
+    - name: install mysql 
+      ansible.builtin.yum:
+        name: mysql-community-server
+        state: installed
+
+    - name: enable/start mysql
+      ansible.builtin.service:
+        enabled: true
+        state: restarted
+
+    
