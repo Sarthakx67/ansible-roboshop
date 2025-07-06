@@ -11,9 +11,7 @@
       ansible.builtin.command: setenforce 0
 
     - name: disable mysql-8 default module
-      ansible.builtin.yum:
-        name: mysql
-        disablerepo: "mysql"
+      ansible.builtin.command: yum install mysql-community-server -y
     
     - name: copy mysql repo
       ansible.builtin.copy:
