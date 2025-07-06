@@ -94,3 +94,63 @@
         daemon_reload: yes
         state: restarted
         enabled: yes
+
+#         Problem 1: All matches were filtered out by modular filtering
+# What it meant: We were trying to install MySQL 5.7 on an Enterprise Linux 8 system (like CentOS 8, Rocky 8). EL8 uses a system called "Modularity" and defaults to MySQL 8.0.
+# How we concluded: The error message itself was the clue. We also noticed our .repo file pointed to an /el/7/ directory, proving we were using a configuration file for the wrong operating system.
+# The Fix:
+# yum module disable mysql -y: We had to tell the OS to "forget" about its default MySQL 8.0 module.
+# yum install https://.../mysql57-community-release-el8-*.rpm: We abandoned the incorrect, copied .repo file and instead used the official MySQL setup RPM for EL8. This is the single most important fix for the installation.
+# Problem 2: file ... conflicts with file from package mariadb...
+# What it meant: The fresh server already had some mariadb (a fork of MySQL) packages installed, and they owned files that our new MySQL installation also wanted to own. yum correctly refused to overwrite them.
+# How we concluded: The yum error log explicitly named the conflicting file (/etc/my.cnf) and the package (mariadb-connector-c-config).
+# The Fix: We added a comprehensive cleanup task at the beginning of the MySQL playbook to yum remove all mysql and mariadb packages, creating a clean slate.
+# Problem 3: Could not find the requested service mysqld
+# What it meant: The systemctl enable mysqld command failed because the service file didn't exist.
+# How we concluded: This was a symptom, not a cause. The real cause was that the previous yum install mysql-community-server task had failed due to the MariaDB conflict, so the package was never actually installed.
+# The Fix: Fixing the MariaDB conflict (Problem 2) solved this automatically.
+# Act III: The Automation Layer - Ansible's Environment
+# After fixing the server, we hit problems with Ansible itself.
+# Problem 1: couldn't resolve module/action 'community.mysql.mysql_user'
+# What it meant: Ansible didn't know what community.mysql.mysql_user was.
+# How we concluded: This is the standard error for a missing Ansible collection.
+# The Fix: We ran ansible-galaxy collection install community.mysql on the control node.
+# Problem 2: A MySQL module is required: ... PyMySQL ...
+# What it meant: This was the most confusing error. The Ansible module needed a Python library (PyMySQL) to talk to the MySQL database.
+# How we concluded: Our initial assumption was that this was needed on the control node. After installing it there and still getting the error, we deduced that the module code is copied to the target node and executed there. Therefore, the dependency was missing on the target nodes (mysql-node and shipping-node).
+# The Fix: We added a task to our playbooks to install the required library using the system package manager, which is the most reliable method: yum install -y python3-PyMySQL.
+# Problem 3: No such file or directory: /usr/bin/python3
+# What it meant: We had told Ansible to use Python 3 on the target, but the target server didn't have it installed.
+# The Fix: We added a pre_tasks block with an ansible.builtin.raw task to install python3 before any other module needed it. The raw module is special because it works even if Python isn't installed.
+# Act IV: The Application Runtime Layer - The Final Bosses
+# The infrastructure was perfect, but the application still wouldn't work.
+# Problem 1: no main manifest attribute, in /app/shipping.jar
+# What it meant: A pure Java error. We were telling systemd to run a JAR file that was not "executable".
+# How we concluded: We inspected the systemctl status shipping output and saw it was running java -jar /app/shipping.jar. By ls-ing the /app directory, we saw that the real executable JAR created by Maven was at /app/target/shipping-1.0.jar.
+# The Fix: We modified the ExecStart= line in our shipping.service file task to point to the correct JAR file.
+# Problem 2: Access denied for user 'shipping'@...
+# What it meant: The Java application was trying to log into MySQL as the user shipping, but that user didn't exist.
+# How we concluded: We saw this error in the journalctl -u shipping logs. We had created a roboshop user, but the application was hard-coded to use shipping.
+# The Fix: We added a task to our MySQL playbook to create the shipping user and grant it privileges. We also updated the shipping.service file to pass the correct DB_USER (shipping) and DB_PASS as environment variables.
+# Problem 3: Unknown database 'cities'
+# What it meant: After fixing the user, the application connected but then crashed because it couldn't find the database it was hard-coded to use.
+# How we concluded: The Java logs showed the JDBC connection string was .../cities. Our playbook was loading a schema that created the cities database but we had added logic to rename it to shipping. This was a mistake.
+# The Fix: We removed all the renaming logic from our playbook and let the application connect to the cities database, just as it wanted.
+# Problem 4: Table 'cities.codes' doesn't exist
+# What it meant: The application was running and connected to the cities database, but when a user tried to view shipping options, the app crashed because it couldn't find the codes table.
+# How we concluded: The Java logs showed the exact SQL error. By inspecting the database manually (SHOW TABLES;), we saw the schema had created a table named cities, not codes.
+# The Fix: We added a final task to the shipping playbook to RENAME TABLE cities TO codes;, solving the final schema mismatch.
+# Problem 5 (The Final Battle): Empty Data and 500 Internal Server Error
+# What it meant: The website was still broken, but now with a 500 error instead of 404 or 502.
+# How we concluded: A 500 error means the request reached the application, but the application code itself crashed. The most likely reason was that the codes table existed but was empty, and the code couldn't handle an empty result.
+# The Fix: We added the last task to the shipping playbook to load the master data: mysql ... < /app/db/master-data.sql. This populated the table, and the application finally worked from end to end.
+# Key Diagnostic Commands Used
+# ansible-playbook -i inventory <file>.yaml -v: Verbosity helps see what Ansible is doing.
+# ssh <user>@<host>: The first step to debug a failing node is to get on it.
+# yum install ...: To manually test if a package can be installed.
+# ping google.com: To test basic internet connectivity.
+# systemctl status <service>: To check if a service is running, failed, or inactive.
+# journalctl -u <service> -f: The most important command, used to view the live logs of a specific service and see the real error messages.
+# ls -l /path/to/file: To verify files and paths.
+# mysql -u <user> -p -h <host>: To connect to the database and manually inspect its state.
+# SHOW DATABASES;, USE <db>;, SHOW TABLES;: The basic SQL commands to verify your schema.
