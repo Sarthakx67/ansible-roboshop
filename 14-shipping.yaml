@@ -69,10 +69,25 @@
     # --- TASK CORRECTED ---
     # Instead of copying a file, we write the correct service content directly.
     # This ensures the ExecStart path is correct.
-    - name: copy shipping service
+    - name: Create and configure the shipping systemd service
       ansible.builtin.copy:
-        src: 15-shipping.service
-        dest: /etc/systemd/system/15-shipping.service
+        dest: /etc/systemd/system/shipping.service
+        content: |
+          [Unit]
+          Description=Shipping Service
+
+          [Service]
+          User=roboshop
+          # The application needs these environment variables to connect to other services.
+          # You MUST provide the correct IP/DNS for your cart and mysql servers.
+          Environment="CART_ENDPOINT=cart.your-domain.com:8080"
+          Environment="DB_HOST=172.31.15.68"
+          ExecStart=/usr/bin/java -jar /app/target/shipping-1.0.jar
+          SyslogIdentifier=shipping
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: Reload and restart shipping service
         
 
     # The rest of the playbook remains the same.
