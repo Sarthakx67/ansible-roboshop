@@ -2,17 +2,21 @@
   hosts: mysql
   become: yes
   pre_tasks:
-    - name: Ensure Python 3 is installed on the target (prerequisite for Ansible)
-      ansible.builtin.raw: yum install -y python3
+    - name: Ensure Python 3 and pip are installed on the target
+      ansible.builtin.raw: yum install -y python3-pip
       changed_when: false
-      # We ignore errors in case python3 is already installed.
-      # The 'raw' module is used because it doesn't require Python on the target.
       ignore_errors: true
   tasks: 
     - name: install extra packages for enterprise linux
       ansible.builtin.yum:
         name: epel-release
-        state: installed
+        state: installed  
+
+    # Install PyMySQL using YUM.
+    - name: Install python3-PyMySQL package using YUM
+      ansible.builtin.yum:
+        name: python3-PyMySQL
+        state: present
 
     - name: Temporarily set SELinux to permissive mode
       ansible.builtin.command: setenforce 0
@@ -33,6 +37,7 @@
 
     - name: disable mysql-8 default module
       ansible.builtin.command: yum module disable mysql -y 
+      changed_when: false
 
     - name: copy MySQL 5.7 Server 
       ansible.builtin.copy:
@@ -54,13 +59,18 @@
       changed_when: false
       ignore_errors: yes
 
+ # Install the Python library that the 'mysql_user' module requires ON THE TARGET.
+    - name: Install PyMySQL library on the target node
+      ansible.builtin.pip:
+        name: PyMySQL
+        executable: pip3 # Make sure to use the pip for Python 3
+
     - name: Set the new root password using the temporary password
-      # This task will only run if we found a temporary password in the previous step
       when: temp_mysql_password.stdout != ""
       community.mysql.mysql_user:
         login_user: root
         login_password: "{{ temp_mysql_password.stdout }}"
         name: root
         host: localhost
-        password: "RoboShop@1" # Your desired new password
+        password: "RoboShop@1"
         state: present
