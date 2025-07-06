@@ -75,6 +75,14 @@
       ansible.builtin.shell: "mysql -h {{ mysql_host }} -uroboshop -pRoboShop@1 < /app/db/schema.sql"
       changed_when: false
       ignore_errors: true # Ignore errors if schema already exists
+    
+    - name: Rename the 'cities' table to 'codes' as expected by the application
+      community.mysql.mysql_query:
+        login_user: roboshop
+        login_password: "RoboShop@1"
+        login_host: "{{ mysql_host }}"
+        login_db: cities # We are working inside the 'cities' database
+        query: "RENAME TABLE IF EXISTS cities TO codes;"
 
     # --- TASKS REMOVED ---
     # All of the complex tasks for creating, checking, and renaming databases and
