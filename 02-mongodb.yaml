@@ -2,6 +2,8 @@
   hosts: mongodb
   become: yes
   tasks:
+  - name: install extra packages for enterprise linux
+    ansible.builtin.command: dnf install epel-release -y
   - name: Temporarily set SELinux to permissive mode
     ansible.builtin.command: setenforce 0
   - name: copy mongodb repo file
