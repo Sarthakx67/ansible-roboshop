@@ -52,7 +52,6 @@
       ansible.builtin.copy:
         src: 18-payment.service
         dest: /etc/systemd/system/payment.service
-        remote_src: yes
 
     - name: daemon reload
       ansible.builtin.systemd:
