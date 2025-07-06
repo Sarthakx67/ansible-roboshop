@@ -3,12 +3,12 @@ ansible_user=ec2-user
 ansible_ssh_private_key_file=/ansible-roboshop/EC2-key.pem
 
 [mongodb]
-mongodb-node ansible_host=13.203.66.202 
+mongodb-node ansible_host=172.31.6.164
 [catalogue]
-catalogue-node ansible_host=13.203.197.162 
+catalogue-node ansible_host=172.31.5.80
 [webserver]
-web-server-node ansible_host=65.2.79.10
+web-server-node ansible_host=172.31.15.121
 [redis]
-redis-node ansible_host=13.233.120.108
+redis-node ansible_host=172.31.4.198
 [cart]
-cart-node ansible_host=3.110.171.9
+cart-node ansible_host=172.31.8.30
