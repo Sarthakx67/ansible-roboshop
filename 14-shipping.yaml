@@ -1,12 +1,23 @@
 - name: installing/configuring shipping services
   hosts: shipping
   become: yes
+  pre_tasks:
+    - name: Ensure Python 3 and pip are installed on the target
+      ansible.builtin.raw: yum install -y python3-pip
+      changed_when: false
+      ignore_errors: true
   tasks: 
     - name: install maven as shipping service is written in java
       ansible.builtin.yum:
         name: maven
         state: installed
     
+    # Install PyMySQL using YUM.
+    - name: Install python3-PyMySQL package using YUM
+      ansible.builtin.yum:
+        name: python3-PyMySQL
+        state: present
+
     - name: check if roboshop user install or not
       ansible.builtin.command: id roboshop
       register: output
