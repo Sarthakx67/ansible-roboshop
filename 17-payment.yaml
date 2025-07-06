@@ -1,0 +1,65 @@
+- name: payments in RoboShop e-commerce app written on Python 3.6
+  hosts: payments
+  become: yes
+  tasks: 
+    - name: Install Python 3.6
+      ansible.builtin.command: yum install python36 gcc python3-devel -y
+    
+    - name: check user roboshop present or not
+      ansible.builtin.command: id roboshop
+      register: output
+      ignore_errors: true
+    
+    - name: create roboshop user
+      ansible.builtin.user:
+        name: roboshop
+      when: output.rc != 0
+    
+    - name: check /app directory exist or not
+      ansible.builtin.stat:
+        path: /app
+      register: directory
+      ignore_errors: yes
+
+    - name: create /app directory
+      ansible.builtin.file:
+        path: /app
+        state: directory
+      when: directory.stat.exists == false
+
+    - name: Download payment artifact
+      ansible.builtin.get_url:
+        url: https://roboshop-builds.s3.amazonaws.com/payment.zip
+        dest: /tmp
+    
+    - name: install unzip tool
+      ansible.builtin.yum:
+        name: unzip
+        state: installed
+
+    - name: unzip downloaded cart artifact
+      ansible.builtin.unarchive:
+        src: /tmp/payment.zip
+        dest: /app
+        remote_src: yes
+
+    - name: install dependencies npm
+      ansible.builtin.command: pip3.6 install -r requirements.txt
+      args: 
+        chdir: /app
+
+    - name: copy dependency files
+      ansible.builtin.copy:
+        src: 18-payment.service
+        dest: /etc/systemd/system/payment.service
+        remote_src: yes
+
+    - name: daemon reload
+      ansible.builtin.systemd:
+        daemon_reload: true
+    
+    - name: start/enable payment
+      ansible.builtin.service:
+        name: payment
+        state: restarted
+        enabled: true
