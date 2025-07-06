@@ -20,17 +20,6 @@
 
     - name: disable mysql-8 default module
       ansible.builtin.command: yum module disable mysql -y 
-    
-    - name: install centos 8 mysql repo
-      ansible.builtin.yum:
-          name: https://dev.mysql.com/get/mysql80-community-release-el8-1.noarch.rpm
-          state: present
-          disable_gpg_check: yes # Sometimes needed for direct RPM installs via URL
-    
-    - name: Disable the mysql80-community repository
-      community.general.yum_repository:
-        name: mysql80-community
-        enabled: no
 
     - name: Install MySQL 5.7 Server and its dependencies
       ansible.builtin.yum:
