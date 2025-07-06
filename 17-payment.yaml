@@ -37,7 +37,7 @@
         name: unzip
         state: installed
 
-    - name: unzip downloaded cart artifact
+    - name: unzip downloaded payment artifact
       ansible.builtin.unarchive:
         src: /tmp/payment.zip
         dest: /app
