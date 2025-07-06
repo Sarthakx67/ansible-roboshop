@@ -1,87 +1,107 @@
-- name: install/configure mysql
+---
+- name: Install and Configure MySQL 5.7 on EL8
   hosts: mysql
   become: yes
-  pre_tasks:
-    - name: Ensure Python 3 and pip are installed on the target
-      ansible.builtin.raw: yum install -y python3-pip
-      changed_when: false
-      ignore_errors: true
-  tasks: 
-    - name: install extra packages for enterprise linux
-      ansible.builtin.yum:
-        name: epel-release
-        state: installed  
-
-    # Install PyMySQL using YUM.
-    - name: Install python3-PyMySQL package using YUM
-      ansible.builtin.yum:
-        name: python3-PyMySQL
-        state: present
-
-    - name: Temporarily set SELinux to permissive mode
-      ansible.builtin.command: setenforce 0
-
-    - name: Remove conflicting mysql/mariadb packages
-      ansible.builtin.yum:
-        name:
-          - mysql
-          - mysql-server
-          - mysql-libs
-          - mysql-common
-          - mariadb
-          - mariadb-libs
-          - mariadb-connector-c-config
-        state: absent
-        autoremove: yes # Remove any unused dependencies as well
-      ignore_errors: yes # Ignore errors if a package is already removed
-
-    - name: disable mysql-8 default module
-      ansible.builtin.command: yum module disable mysql -y 
-      changed_when: false
-
-    - name: copy MySQL 5.7 Server 
-      ansible.builtin.copy:
-        src: 13-mysql.repo
-        dest: /etc/yum.repos.d/mysql.repo
-
-    - name: install mysql
-      ansible.builtin.command: yum install mysql-community-server -y
-    
-    - name: enable/start mysql
-      ansible.builtin.service:
-        name: mysqld
-        enabled: true
-        state: restarted
-
-    - name: Get the initial temporary root password
-      ansible.builtin.shell: "grep 'temporary password' /var/log/mysqld.log | awk '{print $NF}'"
-      register: temp_mysql_password
-      changed_when: false
-      ignore_errors: yes
-
-    # Install the Python library that the 'mysql_user' module requires 
-    - name: Install PyMySQL library on the target node
-      ansible.builtin.pip:
-        name: PyMySQL
-        executable: pip3 
-
-    - name: Set the new root password using the mysql command line client
-      when: temp_mysql_password.stdout != ""
-      ansible.builtin.shell: >
-        mysql -u root --password='{{ temp_mysql_password.stdout }}' --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'RoboShop@1';"
-
-    # A task to verify the new password works
-    - name: Verify that the new root password is valid
+  tasks:
+    # This block runs first to check if MySQL is already configured.
+    - name: Check if the MySQL root password is already set
+      # We try to run a simple query with the final password.
+      # If this command succeeds, it means setup is complete.
+      # The 'rc' (return code) will be 0 on success.
       ansible.builtin.command: mysql -u root -p"RoboShop@1" -e "SELECT 1;"
-      # We use command here because it's simpler and will fail if the password is wrong.
-      # Note the lack of a space between -p and the password. This is required for non-interactive use.
+      register: mysql_password_check
+      # We expect this to fail if the password is not set, so we ignore errors.
+      ignore_errors: true
+      # This task should never report a change.
+      changed_when: false
 
-    - name: Create the application database user
+    # This block contains all the setup tasks. It will only run if the
+    # previous check failed (i.e., the password is not set).
+    - name: Run MySQL setup only if not already configured
+      when: mysql_password_check.rc != 0
+      block:
+        # Task 1: Bootstrap Python on the target node.
+        - name: Ensure Python 3 is installed on the target
+          ansible.builtin.raw: yum install -y python3
+          changed_when: false
+          ignore_errors: true
+
+        # Task 2: Install EPEL and PyMySQL using YUM (most reliable method).
+        - name: Install EPEL repository
+          ansible.builtin.yum:
+            name: epel-release
+            state: present
+
+        - name: Install python3-PyMySQL package via YUM
+          ansible.builtin.yum:
+            name: python3-PyMySQL
+            state: present
+
+        # Task 3: Set SELinux to permissive. Using the module is idempotent.
+        - name: Set SELinux to permissive mode permanently
+          ansible.posix.selinux:
+            policy: targeted
+            state: permissive
+
+        # Task 4: Clean up any old, conflicting packages.
+        - name: Remove conflicting mysql and mariadb packages
+          ansible.builtin.yum:
+            name:
+              - mysql
+              - mysql-server
+              - mysql-libs
+              - mysql-common
+              - mariadb
+              - mariadb-libs
+              - mariadb-connector-c-config
+            state: absent
+            autoremove: yes
+          ignore_errors: yes
+
+        - name: disable mysql-8 default module
+          ansible.builtin.command: yum module disable mysql -y 
+          changed_when: false
+
+        - name: copy MySQL 5.7 Server 
+          ansible.builtin.copy:
+            src: 13-mysql.repo
+            dest: /etc/yum.repos.d/mysql.repo
+
+        - name: install mysql
+          ansible.builtin.command: yum install mysql-community-server -y
+    
+
+        # Task 6: Start the service.
+        - name: Start and enable the mysqld service
+          ansible.builtin.service:
+            name: mysqld
+            state: started
+            enabled: true
+
+        # get the temporary password.
+        - name: Find the line containing the temporary root password
+          ansible.builtin.lineinfile:
+            path: /var/log/mysqld.log
+            regexp: 'A temporary password is generated for root@localhost'
+            state: present
+          register: temp_password_line
+          changed_when: false
+          ignore_errors: yes
+
+        # Task 8: Set the new password using the most robust shell method.
+        - name: Set the new root password using the mysql command-line client
+          when: temp_password_line.found
+          ansible.builtin.shell: >
+            mysql -u root --password='{{ temp_password_line.line | regex_search(': (.*)') | regex_replace(': ', '') }}' --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'RoboShop@1';"
+
+    # This task runs after the block and is for creating the application user.
+    # It assumes the root password is now 'RoboShop@1'.
+    - name: Create the 'roboshop' application user for remote access
       community.mysql.mysql_user:
         name: roboshop
-        host: '%'  # '%' allows connection from any host in your private network
-        password: "RoboShop@1" # Use the same password for simplicity in this project
-        priv: '*.*:ALL,GRANT' # Grant all privileges on all databases
+        host: '%' # Allows connection from any host in the private network
+        password: "RoboShop@1"
+        priv: '*.*:ALL,GRANT'
         state: present
         login_user: root
-        login_password: "RoboShop@1" # Login as root to create the new user
+        login_password: "RoboShop@1"
