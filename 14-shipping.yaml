@@ -107,10 +107,12 @@
         query: "RENAME TABLE cities TO shipping_details;"
       ignore_errors: true # Ignore error if table was already renamed
 
-  handlers:
-    - name: Reload and restart shipping
+    - name: Ensure systemd reloads the new service file
       ansible.builtin.systemd:
-        name: shipping
         daemon_reload: yes
-        state: restarted
+
+    - name: Enable and start the shipping service
+      ansible.builtin.service:
+        name: shipping
+        state: started
         enabled: yes
