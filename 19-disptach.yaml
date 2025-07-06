@@ -45,17 +45,17 @@
         dest: /app
         remote_src: yes
 
-    - name: go land init 
+    - name: go lang init 
       ansible.builtin.command: go mod init dispatch
       args: 
         chdir: /app
 
-    - name: go land get
+    - name: go lang get
       ansible.builtin.command: go get
       args: 
         chdir: /app
     
-    - name: go land build 
+    - name: go lang build 
       ansible.builtin.command: go build
       args: 
         chdir: /app
