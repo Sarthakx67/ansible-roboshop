@@ -109,6 +109,16 @@
         login_db: shipping
         query: "RENAME TABLE cities TO shipping_details;"
       ignore_errors: true
+    
+    - name: Create the 'shipping' application user for the Shipping service
+      community.mysql.mysql_user:
+        name: shipping # The exact username the application requires
+        host: '%'     # Allow connection from any host in your private network
+        password: "RoboShop@1" # You can use the same password for simplicity
+        priv: 'shipping.*:ALL' # Grant ALL privileges ON the 'shipping' database TO this user
+        state: present
+        login_user: root
+        login_password: "RoboShop@1"
 
   # --- HANDLERS BLOCK (This was the missing piece) ---
   # Handlers are only run at the end of the play if they have been notified.
