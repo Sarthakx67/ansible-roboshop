@@ -6,6 +6,7 @@
     # Define the IP of your MySQL server here for easy changes.
     mysql_host: 172.31.15.68
     # Define the IP/DNS of your Cart service here.
+    # THIS MUST BE UPDATED with your actual Cart service IP/DNS.
     cart_host: 172.31.8.30
 
   # This block runs first to install prerequisites Ansible needs to function.
@@ -52,7 +53,6 @@
       ansible.builtin.command: mvn clean package
       args:
         chdir: /app
-      # This is idempotent; Maven won't rebuild if the source hasn't changed.
 
     - name: Create and configure the shipping systemd service file
       ansible.builtin.copy:
@@ -77,47 +77,40 @@
 
     - name: Load the original schema into MySQL
       ansible.builtin.shell: "mysql -h {{ mysql_host }} -uroboshop -pRoboShop@1 < /app/db/schema.sql"
+      changed_when: false # Loading a schema is not a configuration change in Ansible's view
 
-    - name: Ensure the target 'shipping' database exists
-      community.mysql.mysql_db:
-        name: shipping
-        state: present
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: "{{ mysql_host }}"
+    # This block renames the 'cities' database to 'shipping' but only if 'cities' exists.
+    # It uses a rescue block to handle the case where the target table already exists from a partial run.
+    - name: Rename 'cities' database to 'shipping' if it exists
+      block:
+        - name: Move the table and drop the old database
+          community.mysql.mysql_query:
+            login_user: roboshop
+            login_password: "RoboShop@1"
+            login_host: "{{ mysql_host }}"
+            query:
+              - "CREATE DATABASE IF NOT EXISTS shipping;"
+              - "RENAME TABLE cities.cities TO shipping.cities;"
+              - "DROP DATABASE cities;"
+      # This 'when' condition uses a direct query to check for the 'cities' database.
+      when: "lookup('community.mysql.mysql_query', 'SHOW DATABASES LIKE \\'cities\\'', login_host=mysql_host, login_user='roboshop', login_password='RoboShop@1') | length > 0"
+      rescue:
+        - name: Drop the redundant 'cities' database if the rename failed
+          community.mysql.mysql_db:
+            name: cities
+            state: absent
+            login_user: roboshop
+            login_password: "RoboShop@1"
+            login_host: "{{ mysql_host }}"
 
-    - name: Check if the source table 'cities.cities' still exists
-      community.mysql.mysql_query:
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: "{{ mysql_host }}"
-        query: "SHOW TABLES IN cities LIKE 'cities';"
-      register: source_table_check
-      ignore_errors: true
-
-    - name: Move the table from 'cities' db to 'shipping' db
-      when: source_table_check.rowcount[0] > 0
-      community.mysql.mysql_query:
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: "{{ mysql_host }}"
-        query: "RENAME TABLE cities.cities TO shipping.cities;"
-
-    - name: Drop the old 'cities' database now that it is empty
-      when: source_table_check.rowcount[0] > 0
-      community.mysql.mysql_db:
-        name: cities
-        state: absent
-        login_user: roboshop
-        login_password: "RoboShop@1"
-        login_host: "{{ mysql_host }}"
-
-    - name: Rename the 'cities' table to 'shipping_details' for clarity
+    - name: Rename the table inside 'shipping' database for clarity
+      # This is the final step to get the correct table name, e.g., 'shipping_details'.
       community.mysql.mysql_query:
         login_user: roboshop
         login_password: "RoboShop@1"
         login_host: "{{ mysql_host }}"
         login_db: shipping
+        # Using 'RENAME TABLE IF EXISTS' makes this query itself idempotent.
         query: "RENAME TABLE IF EXISTS cities TO shipping_details;"
 
   # Handlers are only run if a task "notifies" them. This is efficient.
