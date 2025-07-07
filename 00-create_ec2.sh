@@ -1,13 +1,13 @@
 #!/bin/bash
 
 
-NAMES=("mongodb")
+NAMES=$@
 IMAGE_ID="ami-0f918f7e67a3323f0"
 SECURITY_GROUP_ID="sg-0c0190c3602b07f27"
 KEY_NAME="EC2-key"
 INSTANCE_TYPE="t2.micro"
 
-for i in "${NAMES[@]}"
+for i in $@
 do
     echo "--------------------------------------------"
     echo "Processing Instance: $i"
