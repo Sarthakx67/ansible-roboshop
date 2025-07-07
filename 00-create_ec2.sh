@@ -40,3 +40,23 @@ done
 
 echo "--------------------------------------------"
 echo "Script finished."
+
+
+# To install the AWS CLI, run the following commands --> 
+
+# curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+# unzip awscliv2.zip
+# sudo ./aws/install
+
+# Run the configure command-->
+                # aws configure
+# The command will prompt you for four pieces of information. Here's what to enter:
+# AWS Access Key ID: [PASTE YOUR ACCESS KEY ID HERE]
+# AWS Secret Access Key: [PASTE YOUR SECRET ACCESS KEY HERE]
+# Default region name: Enter the region where you want to create your instances (e.g., us-east-1, eu-west-2). This must match the region where your IMAGE_ID, SECURITY_GROUP_ID, and KEY_NAME exist.
+# Default output format: Type json and press Enter. The script relies on this format.
+
+# jq Utility: Install -->
+
+#     sudo yum install -y jq 
+#     sudo apt-get update && sudo apt-get install -y jq
